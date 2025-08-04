@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Digit Recognition</title>
+    <style>
+        body { text-align: center; font-family: Arial, sans-serif; background-color: black; color: white; }
+        canvas { border: 2px solid white; background: black; cursor: crosshair; }
+        button { margin: 10px; padding: 10px; font-size: 16px; }
+    </style>
+</head>
+<body>
+    <h1>Digit Recognition</h1>
+    <canvas id="canvas" width="280" height="280"></canvas>
+    <br>
+    <button onclick="clearCanvas()">Clear</button>
+    <button onclick="predictDigit()">Predict</button>
+    <h2>Prediction: <span id="result">None</span></h2>
+
+    <script>
+        let canvas = document.getElementById("canvas");
+        let ctx = canvas.getContext("2d");
+        let isDrawing = false;
+
+        ctx.fillStyle = "black";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        canvas.addEventListener("mousedown", () => isDrawing = true);
+        canvas.addEventListener("mouseup", () => isDrawing = false);
+        canvas.addEventListener("mousemove", draw);
+
+        function draw(event) {
+            if (!isDrawing) return;
+            ctx.fillStyle = "white";  // Set drawing color to white
+            ctx.beginPath();
+            ctx.arc(event.offsetX, event.offsetY, 10, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        function clearCanvas() {
+            ctx.fillStyle = "black";  // Set background color to black
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            document.getElementById("result").innerText = "None";
+        }
+
+        function predictDigit() {
+            let imageData = canvas.toDataURL("image/png");
+            let blob = dataURItoBlob(imageData);
+
+            // Create a FormData object to send the image as multipart/form-data
+            let formData = new FormData();
+            formData.append("file", blob, "drawing.png");
+
+            fetch("http://127.0.0.1:8000/predict", {
+                method: "POST",
+                body: formData, // Sending the FormData object
+            })
+            .then(response => response.json())
+            .then(data => document.getElementById("result").innerText = data.digit)
+            .catch(error => console.error("Error:", error));
+        }
+
+        function dataURItoBlob(dataURI) {
+            let byteString = atob(dataURI.split(",")[1]);
+            let arrayBuffer = new ArrayBuffer(byteString.length);
+            let uint8Array = new Uint8Array(arrayBuffer);
+            for (let i = 0; i < byteString.length; i++) {
+                uint8Array[i] = byteString.charCodeAt(i);
+            }
+            return new Blob([arrayBuffer], { type: "image/png" });
+        }
+    </script>
+</body>
+</html>
